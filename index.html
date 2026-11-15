@@ -13,6 +13,8 @@
 </head>
 <body>
 
+<div id="demoBar"></div>
+
 <header class="top">
   <div class="container nav">
     <a href="#top" class="logo" id="logo">MONTER<span>A</span>NUZ</a>
@@ -22,7 +24,12 @@
       <li><a href="#why">Afzalliklar</a></li>
       <li><a href="#contact">Aloqa</a></li>
     </ul>
-    <button class="burger" id="burger" aria-label="Menyu">☰</button>
+    <div class="nav-actions">
+      <button class="icon-btn" data-act="open-favs" aria-label="Sevimlilar">♡<span class="cnt" id="favCnt" style="display:none">0</span></button>
+      <button class="icon-btn" data-act="open-cart" aria-label="Savat">🛒<span class="cnt" id="cartCnt" style="display:none">0</span></button>
+      <button class="icon-btn" data-act="open-profile" aria-label="Profil">👤<span class="lbl" id="userLbl">Kirish</span></button>
+      <button class="burger" id="burger" aria-label="Menyu">☰</button>
+    </div>
   </div>
 </header>
 
@@ -52,6 +59,12 @@
       <div class="toolbar">
         <div class="chips" id="chips"></div>
         <input class="search" id="search" type="search" placeholder="Qidirish...">
+        <select class="sort" id="sort" aria-label="Saralash">
+          <option value="feat">Tavsiya etilgan</option>
+          <option value="new">Yangilari</option>
+          <option value="asc">Arzonroq</option>
+          <option value="desc">Qimmatroq</option>
+        </select>
       </div>
       <div class="grid" id="grid"></div>
     </div>
@@ -71,7 +84,7 @@
         <div class="feat"><div class="ic">🧵</div><h3>Sifatli matolar</h3><p>Faqat sinalgan va chidamli matolardan tikilgan kiyimlar.</p></div>
         <div class="feat"><div class="ic">🚚</div><h3>Tez yetkazish</h3><p>Toshkent bo'ylab 24 soat ichida, viloyatlarga pochta orqali.</p></div>
         <div class="feat"><div class="ic">↩️</div><h3>Almashtirish</h3><p>O'lcham to'g'ri kelmasa, 7 kun ichida almashtirib beramiz.</p></div>
-        <div class="feat"><div class="ic">💬</div><h3>Qulay buyurtma</h3><p>Telegram yoki telefon orqali bir daqiqada buyurtma bering.</p></div>
+        <div class="feat"><div class="ic">💳</div><h3>Qulay to'lov</h3><p>Karta orqali o'tkazing, chekni yuklang — admin tekshirib tasdiqlaydi.</p></div>
       </div>
     </div>
   </section>
@@ -84,11 +97,11 @@
         <div class="contact-list" id="contactList"></div>
       </div>
       <div>
-        <h2>Tezkor buyurtma</h2>
+        <h2>Savol qoldiring</h2>
         <form class="lead" id="lead">
           <input id="lName" placeholder="Ismingiz" required>
           <input id="lPhone" placeholder="Telefon raqamingiz" required inputmode="tel">
-          <textarea id="lMsg" placeholder="Qaysi mahsulot kerak? (ixtiyoriy)"></textarea>
+          <textarea id="lMsg" placeholder="Savolingiz yoki qaysi mahsulot kerak?"></textarea>
           <button class="btn" type="submit">Telegramga yuborish</button>
         </form>
       </div>
@@ -103,23 +116,14 @@
   </div>
 </footer>
 
-<div class="modal" id="modal">
-  <div class="box">
-    <button class="close" id="mClose" aria-label="Yopish">✕</button>
-    <div class="pic"><img id="mImg" alt=""></div>
-    <div class="info">
-      <span class="cat muted" id="mCat"></span>
-      <h2 id="mName"></h2>
-      <div class="price"><b id="mPrice" style="font-size:1.5rem"></b><s id="mOld"></s></div>
-      <p class="muted" id="mDesc"></p>
-      <div id="mSizesWrap"><div class="muted" style="margin-bottom:8px">O'lcham:</div><div class="sizes" id="mSizes"></div></div>
-      <a class="btn" id="mOrder" target="_blank" rel="noopener">Telegram orqali buyurtma</a>
-      <a class="btn ghost" id="mCall">Qo'ng'iroq qilish</a>
-    </div>
-  </div>
-</div>
+<a class="tg-float" id="tgFloat" target="_blank" rel="noopener" aria-label="Telegram" style="display:none">✈️</a>
 
-<script src="store.js"></script>
+<div class="drawer" id="drawer"></div>
+<div class="modal" id="modal"></div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
