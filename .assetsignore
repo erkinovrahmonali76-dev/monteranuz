@@ -1,0 +1,6 @@
+worker.js
+wrangler.jsonc
+functions
+schema.sql
+SETUP.md
+.assetsignore
