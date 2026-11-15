@@ -1,50 +1,52 @@
-# Monteranuz — bepul, 24/7 ishlaydigan qilib ulash
+# Monteranuz — Cloudflare'da bepul, 24/7 (karta kerak emas)
 
-Hammasi bepul: **Firebase (Spark tarif)** baza va kirish uchun, **GitHub Pages** sayt uchun. Karta kerak emas.
+Kerak bo'ladi: **GitHub akkaunt** va **Cloudflare akkaunt** (ikkalasi ham faqat email bilan bepul).
+Hammasini brauzerdan, kompyuterda bajarish qulay.
 
-## 1. Firebase loyihasi
-1. https://console.firebase.google.com → **Add project** → nom: `monteranuz` (Analytics kerak emas).
-2. Loyiha sahifasida **`</>` (Web)** belgisini bosing → nom bering → **Register app**.
-3. Chiqqan `firebaseConfig` ichidagi `apiKey`, `authDomain`, `projectId`, `appId` ni **config.js** ga ko'chiring.
+## 1. GitHub'ga yuklash
+1. github.com → **New repository** → nom: `monteranuz` → **Create**.
+2. **uploading an existing file** → shu papkadagi hamma fayl va papkani sudrab tashlang
+   (`index.html`, `admin.html`, `app.js`, `admin.js`, `api.js`, `style.css`, `schema.sql`, **`data`** va **`functions`** papkalari).
+3. **Commit changes** bosing.
 
-## 2. Kirish (Authentication)
-**Build → Authentication → Get started → Sign-in method → Email/Password → Enable → Save.**
+## 2. Cloudflare akkaunti va baza
+1. dash.cloudflare.com → Sign up (email + parol).
+2. Chap menyu: **Storage & databases → D1 SQL database → Create database** → nom: `monteranuz` → Create.
+3. Baza ichida **Console** yorlig'ini oching, `schema.sql` faylidagi matnni to'liq qo'yib **Execute** bosing.
+   (Xato bersa, har bir qatorni alohida bajaring.)
 
-## 3. Baza (Firestore)
-1. **Build → Firestore Database → Create database** → joylashuv: `eur3` (Yevropa) → **Production mode**.
-2. **Rules** bo'limiga `firestore.rules` faylidagi matnni to'liq qo'yib, **Publish** bosing.
+## 3. Saytni ulash
+1. **Workers & Pages → Create → Pages → Connect to Git** → GitHub'ni ulang → `monteranuz` repo'ni tanlang.
+2. Build command: **bo'sh qoldiring**. Build output directory: **`/`**. **Save and Deploy**.
+3. Deploy tugagach, loyiha → **Settings** bo'limiga kiring:
+   - **Bindings → Add → D1 database**: Variable name **`DB`**, baza: `monteranuz` → Save.
+   - **Variables and secrets → Add** (turi: **Secret**), uchta qiymat:
+     - `JWT_SECRET` — uzun tasodifiy matn (kamida 32 belgi, masalan klaviaturada bosib yozing)
+     - `ADMIN_EMAIL` — o'zingizning email
+     - `ADMIN_PASSWORD` — admin paroli (kuchli qiling)
+4. **Deployments → oxirgi deploy → Retry deployment** (sozlamalar yangi deployda kuchga kiradi).
 
-## 4. Admin hisobini yaratish
-1. **Authentication → Users → Add user** → o'zingizning email va kuchli parolingiz.
-2. Yaratilgan foydalanuvchining **User UID** ni nusxalang.
-3. **Firestore → Start collection** → nomi `admins` → **Document ID** = o'sha UID → maydon: `ok` (boolean) = `true` → Save.
+Sayt `https://monteranuz.pages.dev` kabi manzilda ochiladi (aniq manzil loyiha sahifasida ko'rinadi).
 
-Shundan keyingina `admin.html` ga shu email va parol bilan kirish mumkin.
-
-## 5. Saytni joylash (GitHub Pages, bepul)
-1. GitHub'da repo oching, shu papkadagi hamma faylni yuklang (`config.js` ham to'ldirilgan holda).
-2. **Settings → Pages → Branch: main, folder: /(root) → Save.**
-3. 1–2 daqiqadan so'ng sayt `https://<login>.github.io/<repo>/` manzilida ochiladi.
-
-Boshqa bepul variant: Firebase Hosting (`firebase deploy`) yoki Cloudflare Pages.
-
-## 6. Birinchi ishga tushirish
-1. `.../admin.html` ni oching va admin email + parol bilan kiring.
-2. Chiqqan sariq banner ichidagi **"Namunaviy ma'lumotni yuklash"** tugmasini bosing (mahsulotlar, sozlamalar, `YANGI10` promokodi yuklanadi).
-3. **Sozlamalar** bo'limida **karta raqami**, karta egasi, telefon, Telegram, yetkazish narxlarini kiriting. To'lov oynasi shu ma'lumotni ko'rsatadi.
+## 4. Birinchi ishga tushirish
+1. `https://MANZIL/admin` ni oching, `ADMIN_EMAIL` va `ADMIN_PASSWORD` bilan kiring.
+2. Sariq bannerdagi **"Namunaviy ma'lumotni yuklash"** ni bosing.
+3. **Sozlamalar** bo'limida karta raqami, karta egasi, telefon, Telegram, yetkazish narxlarini kiriting.
+4. Saytni ochib sinab ko'ring: ro'yxatdan o'ting, savatga qo'shing, buyurtma bering, adminda tasdiqlang.
 
 ## Ishlash tartibi
-- Mijoz telefon raqam + parol bilan ro'yxatdan o'tadi, buyurtma beradi, kartaga pul o'tkazib chek rasmini yuklaydi.
-- Admin chekni tekshirib **tasdiqlaydi** yoki **rad etadi**. Mijoz holatni profilida ko'radi.
-- Mijoz tasdiqlanishidan oldin buyurtmani o'zi bekor qila oladi. Tasdiqlangandan keyin Telegram orqali yozadi, admin bekor qiladi.
+- Mijoz telefon + parol bilan ro'yxatdan o'tadi, kartaga pul o'tkazadi va chek rasmini yuklaydi.
+- Admin chekni ko'rib **tasdiqlaydi** yoki **rad etadi**. Mijoz holatni profilida ko'radi.
+- Mijoz admin tasdiqlamaguncha buyurtmani o'zi bekor qila oladi. Tasdiqlangandan keyin Telegram orqali yozadi, admin bekor qiladi.
+- Narx, chegirma va yetkazish summasi **serverda qayta hisoblanadi**, mijoz brauzerda o'zgartira olmaydi. Baribir chekdagi summani buyurtma summasiga solishtiring.
 
-## Bepul limitlar (Spark)
-- Firestore: kuniga 50 000 o'qish, 20 000 yozish, 1 GB saqlash.
-- Chek rasmlari bazada saqlanadi (har biri taxminan 100–400 KB), 1 GB ga taxminan 3000+ buyurtma sig'adi. Eski buyurtmalarni vaqti-vaqti bilan tozalab turing.
-- Sayt 24/7 ishlaydi, uxlab qolmaydi.
+## Bepul limitlar
+- Funksiyalar: kuniga 100 000 so'rov. D1 baza: 5 GB, kuniga 5 mln o'qish va 100 000 yozish.
+- Sayt uxlab qolmaydi, 24/7 ishlaydi.
 
-## Muhim eslatmalar
-- `apiKey` ochiq bo'lishi normal, himoyani `firestore.rules` beradi. Qoidalarni albatta joylang.
-- Narx hisoblash mijoz brauzerida bajariladi, shuning uchun admin har bir chekdagi summani buyurtma summasiga **qo'lda solishtirib** tasdiqlashi kerak.
-- Parolni unutgan mijoz uchun: Firebase Console → Authentication → shu foydalanuvchini o'chiring, mijoz qayta ro'yxatdan o'tadi.
-- `store.js` eski demo versiya, endi ishlatilmaydi, o'chirib tashlasangiz bo'ladi.
+## Tez-tez uchraydigan muammolar
+- **"Baza ulanmagan"** yozuvi: 3-qadamdagi `DB` binding qo'shilmagan yoki qayta deploy qilinmagan.
+- **"JWT_SECRET sozlanmagan"**: secret qo'shilmagan yoki qayta deploy qilinmagan.
+- **Admin parolini unutdingiz**: D1 → Console: `DELETE FROM kv WHERE k = 'admin_pass';` — keyin `ADMIN_PASSWORD` ishlaydi.
+- **Mijoz parolini unutdi**: D1 → Console: `DELETE FROM users WHERE phone = '998901234567';` — mijoz qayta ro'yxatdan o'tadi.
+- Kod o'zgartirsangiz, GitHub'ga yuklang — Cloudflare o'zi qayta joylaydi.
