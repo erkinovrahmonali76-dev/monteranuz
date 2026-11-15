@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Admin ro'yxati: faqat o'z hujjatini o'qiy oladi, yozish faqat Console orqali
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Sozlamalar va mahsulotlar: hamma o'qiydi, faqat admin yozadi
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /products/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Promokodlar: kodni bilgan kishi bittasini oladi, ro'yxatni faqat admin ko'radi
+    match /promos/{code} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Mijozlar: o'z profilini boshqaradi, admin hammasini ko'radi
+    match /users/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'phone', 'address', 'createdAt']);
+      allow delete: if isAdmin();
+    }
+
+    // Buyurtmalar
+    match /orders/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      // mijoz faqat o'z nomidan, "pending" holatda yarata oladi
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      // admin hamma narsani o'zgartiradi; mijoz faqat o'z "pending" buyurtmasini bekor qiladi
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.uid == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note'])
+      );
+      allow delete: if isAdmin();
+    }
+  }
+}
