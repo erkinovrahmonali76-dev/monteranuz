@@ -1,0 +1,21 @@
+{
+  "settings": {
+    "brand": "MONTERANUZ",
+    "phone": "+998 90 123 45 67",
+    "telegram": "monteranuz",
+    "instagram": "monteranuz",
+    "address": "Toshkent shahri, Chilonzor tumani",
+    "hours": "Har kuni 09:00 – 21:00",
+    "heroTitle": "Erkaklar uchun <em>haqiqiy</em> uslub",
+    "heroText": "Sifatli matolar, ideal kesim va hamyonbop narxlar. Kundalik kiyimdan tantanali liboslargacha — hammasi bir joyda.",
+    "currency": "so'm"
+  },
+  "products": [
+    { "id": "p1", "name": "Klassik oq ko'ylak", "category": "Ko'ylaklar", "price": 289000, "oldPrice": 349000, "sizes": ["S","M","L","XL"], "desc": "100% paxta, slim fit kesim. Ofis va tantanali tadbirlar uchun.", "image": "", "stock": true, "featured": true },
+    { "id": "p2", "name": "Qora chino shim", "category": "Shimlar", "price": 345000, "oldPrice": 0, "sizes": ["30","32","34","36"], "desc": "Cho'ziluvchan mato, qulay o'tirish. Har kuni kiyish uchun.", "image": "", "stock": true, "featured": true },
+    { "id": "p3", "name": "Ikki tugmali kostyum", "category": "Kostyumlar", "price": 1450000, "oldPrice": 1690000, "sizes": ["48","50","52","54"], "desc": "Jun aralash mato, ikki qismli to'plam: pidjak va shim.", "image": "", "stock": true, "featured": true },
+    { "id": "p4", "name": "Oversize futbolka", "category": "Futbolkalar", "price": 129000, "oldPrice": 0, "sizes": ["M","L","XL"], "desc": "Yumshoq paxta, yozgi mavsum uchun ideal.", "image": "", "stock": true, "featured": false },
+    { "id": "p5", "name": "Charm kurtka", "category": "Kurtkalar", "price": 1190000, "oldPrice": 0, "sizes": ["M","L","XL"], "desc": "Ekologik charm, issiq astarli. Kuz-qish mavsumi uchun.", "image": "", "stock": false, "featured": false },
+    { "id": "p6", "name": "Klassik tufli", "category": "Poyabzal", "price": 590000, "oldPrice": 690000, "sizes": ["41","42","43","44"], "desc": "Tabiiy charm, qulay tagcharm.", "image": "", "stock": true, "featured": false }
+  ]
+}
