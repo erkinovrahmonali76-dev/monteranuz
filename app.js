@@ -27,7 +27,7 @@
   function saveFavs() { lsSet('mnz_favs', favs); updateBadges(); }
 
   function updateBadges() {
-    var n = cart.reduce(function (a, i) { return a + i.qty; }, 0);
+    var n = cart.reduce(function (a, i) { return a + (prod(i.pid) ? i.qty : 0); }, 0);
     $('cartCnt').textContent = n; $('cartCnt').style.display = n ? '' : 'none';
     $('favCnt').textContent = favs.length; $('favCnt').style.display = favs.length ? '' : 'none';
     $('userLbl').textContent = user ? (user.name || 'Profil').split(' ')[0] : 'Kirish';
@@ -341,7 +341,9 @@
           '<div class="muted" style="font-size:.82rem">' + dt(o.createdAt) + ' · ' + esc(o.regionLabel || '') + '</div>' +
           '<ul>' + (o.items || []).map(function (i) { return '<li>' + esc(i.name) + ' × ' + i.qty + (i.color ? ' · ' + esc(i.color) : '') + (i.size ? ' · ' + esc(i.size) : '') + '</li>'; }).join('') + '</ul>' +
           '<div class="sumrow total"><span>Jami</span><b>' + money(o.total) + '</b></div>' +
-          (o.note ? '<div class="' + (o.status === 'rejected' || o.status === 'cancelled' ? 'alert' : 'muted') + '" style="font-size:.88rem">Admin: ' + esc(o.note) + '</div>' : '') + '</div>';
+          (o.note ? '<div class="' + (o.status === 'rejected' || o.status === 'cancelled' ? 'alert' : 'muted') + '" style="font-size:.88rem">Admin: ' + esc(o.note) + '</div>' : '') +
+          (o.status === 'pending' ? '<button class="btn danger sm" style="margin-top:10px" data-act="ocancel" data-id="' + esc(o.id) + '" data-n="' + esc(o.number) + '">Buyurtmani bekor qilish</button>'
+            : (o.status === 'confirmed' || o.status === 'shipping') ? '<a class="btn ghost sm" style="margin-top:10px" target="_blank" rel="noopener" href="' + tg() + '?text=' + encodeURIComponent('Assalomu alaykum! Buyurtma ' + o.number + " ni bekor qilmoqchiman.") + '">Bekor qilish uchun Telegramda yozing</a>' : '') + '</div>';
       }).join('') + '</div>' : '<div class="empty" style="padding:30px 0">Hali buyurtma yo\'q</div>';
     }).catch(function () { if ($('pBody')) $('pBody').innerHTML = '<div class="alert">Buyurtmalarni yuklab bo\'lmadi</div>'; });
   }
@@ -383,6 +385,14 @@
     'checkout': checkout,
     'auth-tab': function (el) { openAuth(el.dataset.t); },
     'ptab': function (el) { openProfile(el.dataset.t); },
+    'ocancel': function (el) {
+      if (!user || !el.dataset.id) return;
+      if (!confirm('Buyurtma № ' + el.dataset.n + ' bekor qilinsinmi?')) return;
+      el.disabled = true;
+      MNZ.updateOrder(el.dataset.id, { status: 'cancelled', note: 'Mijoz tomonidan bekor qilindi' })
+        .then(function () { MNZ.toast('Buyurtma bekor qilindi'); openProfile('orders'); })
+        .catch(function (er) { el.disabled = false; MNZ.toast((er && er.message) || "Bekor qilib bo'lmadi. Telegram orqali yozing.", true); });
+    },
     'logout': function () { MNZ.logout().then(function () { user = null; updateBadges(); closeModal(); MNZ.toast('Chiqdingiz'); }); },
     'copy-card': function () {
       var num = String(S.cardNumber).replace(/\s+/g, '');
