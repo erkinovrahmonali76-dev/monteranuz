@@ -1,25 +1,10 @@
-/* Monteranuz — ma'lumotlar qatlami (Firebase: Auth + Firestore).
+/* Monteranuz — brauzer tomoni: serverga (/api) murojaat qiluvchi qatlam.
    Sayt (app.js) va admin panel (admin.js) shu faylga tayanadi. */
 (function () {
   'use strict';
   var CFG = window.MNZ_CONFIG || {};
-  var FB = CFG.firebase || {};
-  var DOMAIN = CFG.phoneEmailDomain || 'monteranuz.app';
-  var configured = !!(FB.apiKey && FB.projectId && window.firebase);
-  var auth = null, db = null;
-
-  if (configured) {
-    if (!firebase.apps.length) firebase.initializeApp(FB);
-    auth = firebase.auth();
-    db = firebase.firestore();
-  }
-
-  function run(f) {
-    return new Promise(function (res) {
-      if (!configured) throw new Error("Firebase ulanmagan. config.js ni to'ldiring (SETUP.md).");
-      res(f());
-    });
-  }
+  var TK = 'mnz_token', AK = 'mnz_admin';
+  var ON_ADMIN = /admin/i.test(location.pathname);
 
   /* ---------- konstantalar ---------- */
   var STATUS = {
@@ -141,182 +126,89 @@
     });
   }
 
-  /* ---------- xatolarni o'zbekchaga o'girish ---------- */
-  function authErr(e) {
-    var m = {
-      'auth/invalid-credential': "Telefon raqam yoki parol noto'g'ri",
-      'auth/wrong-password': "Telefon raqam yoki parol noto'g'ri",
-      'auth/user-not-found': "Telefon raqam yoki parol noto'g'ri",
-      'auth/invalid-email': "Email noto'g'ri",
-      'auth/email-already-in-use': "Bu raqam allaqachon ro'yxatdan o'tgan. Kirish bo'limidan kiring",
-      'auth/weak-password': "Parol kamida 6 belgidan iborat bo'lsin",
-      'auth/too-many-requests': "Juda ko'p urinish. Birozdan so'ng qayta urinib ko'ring",
-      'auth/network-request-failed': 'Internet aloqasini tekshiring',
-      'auth/requires-recent-login': "Xavfsizlik uchun chiqib, qayta kiring va parolni yangilang",
-      'permission-denied': "Ruxsat yo'q (Firestore qoidalarini tekshiring)"
-    };
-    var code = e && e.code ? String(e.code) : '';
-    return new Error(m[code] || (e && e.message) || 'Xatolik');
+  /* ---------- serverga so'rov ---------- */
+  function tok(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+  function setTok(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+
+  function call(method, path, body, admin) {
+    var key = admin ? AK : TK, h = {}, t = tok(key);
+    if (t) h.Authorization = 'Bearer ' + t;
+    var o = { method: method, headers: h };
+    if (body !== undefined) { h['Content-Type'] = 'application/json'; o.body = JSON.stringify(body); }
+    return fetch('/api/' + path, o).then(function (r) {
+      return r.text().then(function (txt) {
+        var j = null; try { j = txt ? JSON.parse(txt) : null; } catch (e) {}
+        if (!r.ok) {
+          if (r.status === 401) setTok(key, '');
+          throw new Error((j && j.error) || ('Server xatosi (' + r.status + ')'));
+        }
+        return j;
+      });
+    }, function () { throw new Error('Internet aloqasini tekshiring'); });
   }
-  function wrap(p) { return p.catch(function (e) { throw authErr(e); }); }
 
   /* ---------- sozlamalar / mahsulotlar / promokodlar ---------- */
-  function settings() {
-    return run(function () { return wrap(db.collection('settings').doc('main').get()); })
-      .then(function (d) { return normSettings(d.exists ? d.data() : {}); });
-  }
-  function productsRaw() {
-    return run(function () { return wrap(db.collection('products').get()); }).then(function (snap) {
-      if (snap.empty) return null;
-      return snap.docs.map(function (d) { return normProduct(Object.assign({ id: d.id }, d.data())); })
-        .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-    });
-  }
-  function products() { return productsRaw().then(function (l) { return l || []; }); }
-
-  function saveSettings(s) {
-    return run(function () { return wrap(db.collection('settings').doc('main').set(normSettings(s))); });
-  }
-  function saveProduct(p) {
-    var n = normProduct(p);
-    return run(function () { return wrap(db.collection('products').doc(n.id).set(n)); });
-  }
-  function saveProducts(list) {
-    return run(function () {
-      var b = db.batch();
-      list.forEach(function (p) { var n = normProduct(p); b.set(db.collection('products').doc(n.id), n); });
-      return wrap(b.commit());
-    });
-  }
-  function deleteProduct(id) { return run(function () { return wrap(db.collection('products').doc(id).delete()); }); }
+  function settings() { return call('GET', 'settings').then(normSettings); }
+  function saveSettings(s) { return call('PUT', 'settings', normSettings(s), true); }
+  function products() { return call('GET', 'products').then(function (l) { return (l || []).map(normProduct); }); }
+  function productsRaw() { return products().then(function (l) { return l.length ? l : null; }); }
+  function saveProduct(p) { return call('POST', 'products', { products: [normProduct(p)] }, true); }
+  function saveProducts(list) { return call('POST', 'products', { products: list.map(normProduct) }, true); }
+  function deleteProduct(id) { return call('DELETE', 'products/' + encodeURIComponent(id), undefined, true); }
 
   function promo(code) {
     code = String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-    if (!code) return Promise.resolve(null);
-    return run(function () { return wrap(db.collection('promos').doc(code).get()); })
-      .then(function (d) { return d.exists ? Object.assign({ code: d.id }, d.data()) : null; });
+    return code ? call('GET', 'promos/' + encodeURIComponent(code)) : Promise.resolve(null);
   }
-  function promos() {
-    return run(function () { return wrap(db.collection('promos').get()); })
-      .then(function (s) { return s.docs.map(function (d) { return Object.assign({ code: d.id }, d.data()); }); });
-  }
-  function savePromo(p) {
-    var o = { code: p.code, type: p.type === 'amount' ? 'amount' : 'percent', value: num(p.value), min: num(p.min), active: p.active !== false };
-    return run(function () { return wrap(db.collection('promos').doc(o.code).set(o)); });
-  }
-  function deletePromo(code) { return run(function () { return wrap(db.collection('promos').doc(code).delete()); }); }
+  function promos() { return call('GET', 'promos', undefined, true); }
+  function savePromo(p) { return call('PUT', 'promos', p, true); }
+  function deletePromo(code) { return call('DELETE', 'promos/' + encodeURIComponent(code), undefined, true); }
 
   /* ---------- buyurtmalar ---------- */
   function createOrder(o) {
-    return run(function () { return wrap(db.collection('orders').add(o)); }).then(function (ref) { return ref.id; });
+    return call('POST', 'orders', o).then(function (r) { if (r && r.number) o.number = r.number; return r && r.id; });
   }
-  function updateOrder(id, patch) {
-    return run(function () { return wrap(db.collection('orders').doc(id).update(patch)); });
-  }
+  function updateOrder(id, patch) { return call('PATCH', 'orders/' + encodeURIComponent(id), patch, ON_ADMIN); }
   function orders() {
-    return run(function () { return wrap(db.collection('orders').orderBy('createdAt', 'desc').limit(500).get()); })
-      .then(function (s) { return s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); });
+    return call('GET', 'orders', undefined, true).then(function (l) { return (l || []).map(function (o) { o.receipt = ''; return o; }); });
   }
-  function myOrders(uid) {
-    return run(function () { return wrap(db.collection('orders').where('uid', '==', uid).get()); }).then(function (s) {
-      return s.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); })
-        .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-    });
+  function orderReceipt(id) {
+    return call('GET', 'orders/' + encodeURIComponent(id) + '/receipt', undefined, true).then(function (r) { return (r && r.receipt) || ''; });
   }
-  function users() {
-    return run(function () { return wrap(db.collection('users').get()); })
-      .then(function (s) { return s.docs.map(function (d) { return Object.assign({ uid: d.id }, d.data()); }); });
-  }
+  function myOrders() { return call('GET', 'my-orders'); }
+  function users() { return call('GET', 'users', undefined, true); }
 
   /* ---------- mijoz hisobi (telefon + parol) ---------- */
-  function phoneEmail(phone) { return normPhone(phone) + '@' + DOMAIN; }
-  function userFrom(u, data) {
-    data = data || {};
-    var ph = data.phone || (u.email ? u.email.split('@')[0] : '');
-    return { uid: u.uid, name: data.name || u.displayName || '', phone: ph, address: data.address || '' };
-  }
-  function isCustomer(u) { return !!(u && u.email && u.email.slice(-('@' + DOMAIN).length) === '@' + DOMAIN); }
-  function loadUser(u) {
-    return db.collection('users').doc(u.uid).get().then(function (d) { return userFrom(u, d.exists ? d.data() : null); })
-      .catch(function () { return userFrom(u, null); });
-  }
-
   function register(o) {
-    return run(function () {
-      return wrap(auth.createUserWithEmailAndPassword(phoneEmail(o.phone), o.password)).then(function (cred) {
-        var u = cred.user, data = { uid: u.uid, name: o.name, phone: normPhone(o.phone), address: '', createdAt: Date.now() };
-        return u.updateProfile({ displayName: o.name }).catch(function () {})
-          .then(function () { return wrap(db.collection('users').doc(u.uid).set(data)); })
-          .then(function () { return userFrom(u, data); });
-      });
-    });
+    return call('POST', 'register', { name: o.name, phone: o.phone, password: o.password })
+      .then(function (r) { setTok(TK, r.token); return r.user; });
   }
   function login(phone, pass) {
-    return run(function () {
-      return wrap(auth.signInWithEmailAndPassword(phoneEmail(phone), pass)).then(function (cred) { return loadUser(cred.user); });
-    });
+    return call('POST', 'login', { phone: phone, password: pass })
+      .then(function (r) { setTok(TK, r.token); return r.user; });
   }
-  function logout() { return run(function () { return auth.signOut(); }); }
-  function saveProfile(uid, patch) {
-    var p = {};
-    if (patch.name != null) p.name = str(patch.name);
-    if (patch.address != null) p.address = str(patch.address);
-    return run(function () { return wrap(db.collection('users').doc(uid).set(p, { merge: true })); });
-  }
+  function logout() { setTok(TK, ''); return Promise.resolve(); }
+  function saveProfile(uid, patch) { return call('PUT', 'profile', { name: patch.name, address: patch.address }); }
   function onAuth(cb) {
-    if (!configured) { cb(null); return; }
-    auth.onAuthStateChanged(function (u) {
-      if (!u || !isCustomer(u)) { cb(null); return; }
-      loadUser(u).then(cb);
-    });
+    if (!tok(TK)) { cb(null); return; }
+    call('GET', 'me').then(cb, function () { cb(null); });
   }
 
   /* ---------- admin ---------- */
-  function isAdminUser(u) {
-    if (!u) return Promise.resolve(false);
-    return db.collection('admins').doc(u.uid).get().then(function (d) { return d.exists; }).catch(function () { return false; });
-  }
   function adminLogin(email, pass) {
-    return run(function () {
-      return wrap(auth.signInWithEmailAndPassword(String(email || '').trim(), pass)).then(function (cred) {
-        return isAdminUser(cred.user).then(function (ok) {
-          if (!ok) return auth.signOut().then(function () { throw new Error("Bu hisob admin emas (admins ro'yxatida yo'q)"); });
-          return true;
-        });
-      });
-    });
+    return call('POST', 'admin/login', { email: email, password: pass }, true)
+      .then(function (r) { setTok(AK, r.token); return true; });
   }
-  function adminLogout() { return run(function () { return auth.signOut(); }); }
+  function adminLogout() { setTok(AK, ''); return Promise.resolve(); }
   function adminCheck() {
-    if (!configured) return Promise.resolve(false);
-    return new Promise(function (res) {
-      var off = auth.onAuthStateChanged(function (u) { off(); isAdminUser(u).then(res); });
-    });
+    if (!tok(AK)) return Promise.resolve(false);
+    return call('GET', 'admin/check', undefined, true).then(function () { return true; }, function () { return false; });
   }
-  function changeAdminPass(p) {
-    return run(function () {
-      if (!auth.currentUser) throw new Error('Avval tizimga kiring');
-      return wrap(auth.currentUser.updatePassword(p));
-    });
-  }
+  function changeAdminPass(p) { return call('POST', 'admin/password', { password: p }, true); }
 
   /* ---------- zaxira / namunaviy ma'lumot ---------- */
-  function exportAll() {
-    return Promise.all([settings(), productsRaw(), promos()]).then(function (r) {
-      return { settings: r[0], products: r[1] || [], promos: r[2] };
-    });
-  }
-  function importAll(d) {
-    d = d || {};
-    return run(function () {
-      var jobs = [];
-      if (d.settings) jobs.push(saveSettings(d.settings));
-      var ps = Array.isArray(d.products) ? d.products : [];
-      for (var i = 0; i < ps.length; i += 400) jobs.push(saveProducts(ps.slice(i, i + 400)));
-      (Array.isArray(d.promos) ? d.promos : []).forEach(function (p) { if (p && p.code) jobs.push(savePromo(p)); });
-      return Promise.all(jobs);
-    });
-  }
+  function exportAll() { return call('GET', 'export', undefined, true); }
+  function importAll(d) { return call('POST', 'import', d || {}, true); }
   function loadSeed() {
     return fetch('data/data.json', { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('data/data.json topilmadi'); return r.json(); })
@@ -327,25 +219,15 @@
   }
   function clearDemo() { return Promise.resolve(); }
 
-  /* sozlanmagan bo'lsa ko'rinadigan ogohlantirish */
-  if (!configured) {
-    document.addEventListener('DOMContentLoaded', function () {
-      var b = document.createElement('div');
-      b.style.cssText = 'background:#e5484d;color:#fff;padding:10px 16px;text-align:center;font:14px Arial;position:relative;z-index:999';
-      b.textContent = "Firebase ulanmagan: config.js ni to'ldiring (SETUP.md ga qarang).";
-      document.body.insertBefore(b, document.body.firstChild);
-    });
-  }
-
   window.MNZ = {
-    mode: 'firebase', CFG: CFG, STATUS: STATUS, PAID: PAID, CATEGORIES: CATEGORIES,
+    mode: 'server', CFG: CFG, STATUS: STATUS, PAID: PAID, CATEGORIES: CATEGORIES,
     esc: esc, fmt: fmt, digits: digits, normPhone: normPhone, validPhone: validPhone, fmtPhone: fmtPhone,
     normSettings: normSettings, normProduct: normProduct, discountFor: discountFor, deliveryFor: deliveryFor,
     orderNumber: orderNumber, placeholder: placeholder, toast: toast, fileToDataUrl: fileToDataUrl,
     settings: settings, products: products, productsRaw: productsRaw,
     saveSettings: saveSettings, saveProduct: saveProduct, saveProducts: saveProducts, deleteProduct: deleteProduct,
     promo: promo, promos: promos, savePromo: savePromo, deletePromo: deletePromo,
-    createOrder: createOrder, updateOrder: updateOrder, orders: orders, myOrders: myOrders, users: users,
+    createOrder: createOrder, updateOrder: updateOrder, orders: orders, orderReceipt: orderReceipt, myOrders: myOrders, users: users,
     register: register, login: login, logout: logout, saveProfile: saveProfile, onAuth: onAuth,
     adminLogin: adminLogin, adminLogout: adminLogout, adminCheck: adminCheck, changeAdminPass: changeAdminPass,
     exportAll: exportAll, importAll: importAll, loadSeed: loadSeed, clearDemo: clearDemo
