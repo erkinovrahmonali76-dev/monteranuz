@@ -15,11 +15,15 @@
   <form class="login" id="loginForm">
     <div class="logo">MONTER<span>A</span>NUZ</div>
     <h1>Admin panelga kirish</h1>
-    <label>Parol
-      <input type="password" id="loginPass" autocomplete="current-password" required autofocus>
+    <label id="emailWrap">Admin email
+      <input type="email" id="loginEmail" autocomplete="username">
     </label>
+    <label>Parol
+      <input type="password" id="loginPass" autocomplete="current-password" required>
+    </label>
+    <div id="loginErr" class="alert" style="display:none"></div>
     <button class="btn" type="submit">Kirish</button>
-    <p class="muted" style="font-size:.85rem">Birinchi marta kirish paroli: <b>admin123</b>. Kirgach, «Sozlamalar» bo'limida uni albatta almashtiring.</p>
+    <p class="muted" id="loginHint" style="font-size:.85rem"></p>
     <a href="index.html" class="muted" style="font-size:.9rem">← Saytga qaytish</a>
   </form>
 </div>
@@ -30,27 +34,52 @@
     <div class="admin-top">
       <div class="logo">MONTER<span>A</span>NUZ <span class="muted" style="letter-spacing:0;font-weight:400;font-size:.9rem">/ admin</span></div>
       <div class="acts">
+        <span class="st" id="modeTag" style="background:#d9a441"></span>
         <a class="btn ghost sm" href="index.html" target="_blank">Saytni ko'rish</a>
         <button class="btn danger sm" id="logout">Chiqish</button>
       </div>
     </div>
 
+    <div id="initBanner" class="note" style="display:none;margin-top:16px"></div>
+
     <div class="tabs">
-      <button class="tab active" data-t="products">Mahsulotlar</button>
-      <button class="tab" data-t="settings">Sozlamalar</button>
-      <button class="tab" data-t="publish">Saytga chiqarish</button>
+      <button class="tab active" data-t="dash">📊 Statistika</button>
+      <button class="tab" data-t="orders">🧾 Buyurtmalar <span class="st" id="newCnt" style="background:#e5484d;color:#fff;display:none"></span></button>
+      <button class="tab" data-t="products">👔 Mahsulotlar</button>
+      <button class="tab" data-t="customers">👥 Mijozlar</button>
+      <button class="tab" data-t="promos">🏷 Promokodlar</button>
+      <button class="tab" data-t="settings">⚙️ Sozlamalar</button>
+    </div>
+
+    <!-- Statistika -->
+    <div class="panel active" id="p-dash">
+      <div class="kpis" id="kpis"></div>
+      <div class="two-col">
+        <div class="box-s"><h3>So'nggi 7 kun: tasdiqlangan tushum</h3><div id="chart"></div></div>
+        <div class="box-s"><h3>Eng ko'p sotilganlar</h3><div id="topList"></div></div>
+      </div>
+    </div>
+
+    <!-- Buyurtmalar -->
+    <div class="panel" id="p-orders">
+      <div class="toolbar">
+        <div class="chips" id="oChips"></div>
+        <input class="search" id="oSearch" type="search" placeholder="Raqam, ism yoki telefon...">
+        <button class="btn ghost sm" id="oReload">↻ Yangilash</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>№</th><th>Mijoz</th><th>Summa</th><th>Holat</th><th>Sana</th><th></th></tr></thead>
+          <tbody id="oRows"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Mahsulotlar -->
-    <div class="panel active" id="p-products">
-      <div class="kpis">
-        <div class="kpi"><b id="kTotal">0</b><span>Jami mahsulot</span></div>
-        <div class="kpi"><b id="kStock">0</b><span>Sotuvda</span></div>
-        <div class="kpi"><b id="kOut">0</b><span>Tugagan</span></div>
-        <div class="kpi"><b id="kCats">0</b><span>Toifalar</span></div>
-      </div>
+    <div class="panel" id="p-products">
       <div class="toolbar">
         <input class="search" id="aSearch" type="search" placeholder="Mahsulot qidirish..." style="flex:1">
+        <button class="btn ghost" id="bulkBtn">% Ommaviy narx</button>
         <button class="btn" id="addBtn">+ Yangi mahsulot</button>
       </div>
       <div class="table-wrap">
@@ -61,9 +90,33 @@
       </div>
     </div>
 
+    <!-- Mijozlar -->
+    <div class="panel" id="p-customers">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ism</th><th>Telefon</th><th>Buyurtmalar</th><th>Xarid summasi</th><th>Ro'yxatdan o'tgan</th></tr></thead>
+          <tbody id="cRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Promokodlar -->
+    <div class="panel" id="p-promos">
+      <form id="promoForm" class="form-grid" style="margin-bottom:20px">
+        <label>Kod<input id="prCode" required maxlength="20" placeholder="YANGI10" style="text-transform:uppercase"></label>
+        <label>Turi<select id="prType"><option value="percent">Foiz (%)</option><option value="amount">Aniq summa</option></select></label>
+        <label>Qiymati<input id="prValue" type="number" min="1" required></label>
+        <label>Minimal buyurtma summasi<input id="prMin" type="number" min="0" value="0"></label>
+        <label class="check"><input type="checkbox" id="prActive" checked> Faol</label>
+        <div><button class="btn" type="submit">Saqlash</button></div>
+      </form>
+      <div class="table-wrap"><table><thead><tr><th>Kod</th><th>Chegirma</th><th>Min. summa</th><th>Holat</th><th></th></tr></thead><tbody id="prRows"></tbody></table></div>
+    </div>
+
     <!-- Sozlamalar -->
     <div class="panel" id="p-settings">
       <form id="setForm" class="form-grid">
+        <h3 class="full">Do'kon</h3>
         <label>Do'kon nomi<input id="sBrand" required></label>
         <label>Valyuta<input id="sCur" placeholder="so'm"></label>
         <label>Telefon<input id="sPhone" placeholder="+998 90 123 45 67"></label>
@@ -73,68 +126,44 @@
         <label class="full">Manzil<input id="sAddr"></label>
         <label class="full">Bosh sahifa sarlavhasi (<code>&lt;em&gt;…&lt;/em&gt;</code> — oltin rangli so'z)<input id="sHT"></label>
         <label class="full">Bosh sahifa matni<textarea id="sHX"></textarea></label>
+        <h3 class="full" style="margin-top:12px">To'lov</h3>
+        <label>Karta raqami<input id="sCard" placeholder="6262 5701 3419 2691"></label>
+        <label>Karta egasi<input id="sHolder" placeholder="FAMILIYA ISM"></label>
+        <label>Bank (ixtiyoriy)<input id="sBank"></label>
+        <label class="full">To'lov bo'yicha izoh<textarea id="sPayNote"></textarea></label>
+        <h3 class="full" style="margin-top:12px">Yetkazish</h3>
+        <label>Toshkent shahri bo'yicha narx<input id="sDC" type="number" min="0"></label>
+        <label>Viloyat / boshqa shahar narxi<input id="sDR" type="number" min="0"></label>
+        <label class="full">Shu summadan yuqori buyurtmada yetkazish bepul (0 = o'chirilgan)<input id="sFree" type="number" min="0"></label>
         <div class="full"><button class="btn" type="submit">Saqlash</button></div>
       </form>
 
-      <h3 style="margin:34px 0 12px">Parolni almashtirish</h3>
+      <h3 style="margin:34px 0 12px">Parol</h3>
       <form id="passForm" class="form-grid">
         <label>Yangi parol (kamida 6 belgi)<input type="password" id="np1" minlength="6" autocomplete="new-password"></label>
-        <label>Yangi parolni takrorlang<input type="password" id="np2" minlength="6" autocomplete="new-password"></label>
-        <div class="full"><button class="btn ghost" type="submit">Parolni yangilash</button></div>
+        <label>Takrorlang<input type="password" id="np2" minlength="6" autocomplete="new-password"></label>
+        <div class="full"><button class="btn ghost" type="submit">Parolni yangilash</button>
+        <span class="muted" id="passHint" style="font-size:.85rem;margin-left:10px"></span></div>
       </form>
-    </div>
 
-    <!-- Chiqarish -->
-    <div class="panel" id="p-publish">
-      <div class="note" style="margin-bottom:18px">
-        GitHub Pages — statik hosting, shuning uchun admin paneldagi o'zgarishlar avval <b>faqat shu brauzerda</b> (qoralama) saqlanadi.
-        Hamma mehmonlarga ko'rinishi uchun <b>data.json</b> faylini yuklab oling va GitHub'dagi <code>data/data.json</code> o'rniga qo'ying (Commit qiling) — 1–2 daqiqada sayt yangilanadi.
-      </div>
+      <h3 style="margin:34px 0 12px">Zaxira nusxa</h3>
       <div class="acts" style="flex-wrap:wrap">
         <button class="btn" id="exportBtn">⬇ data.json yuklab olish</button>
-        <label class="btn ghost" style="cursor:pointer;display:inline-flex">⬆ data.json yuklash (tiklash)
+        <label class="btn ghost" style="cursor:pointer;display:inline-flex">⬆ data.json yuklash
           <input type="file" id="importFile" accept="application/json,.json" hidden>
         </label>
-        <button class="btn danger" id="resetBtn">Qoralamani o'chirish</button>
+        <button class="btn danger" id="resetBtn" style="display:none">Demo ma'lumotni tozalash</button>
       </div>
-      <p class="muted" style="margin-top:16px;font-size:.9rem">
-        «Qoralamani o'chirish» brauzerdagi o'zgarishlarni o'chiradi va sayt yana GitHub'dagi data.json'ni ko'rsatadi.
-      </p>
+      <p class="muted" id="backupHint" style="margin-top:12px;font-size:.88rem"></p>
     </div>
   </div>
 </div>
 
-<!-- Mahsulot oynasi -->
-<div class="modal" id="pModal">
-  <form class="box" id="pForm" style="display:block;padding:26px;max-width:720px">
-    <button type="button" class="close" id="pClose" aria-label="Yopish">✕</button>
-    <h2 id="pTitle" style="margin-bottom:18px">Yangi mahsulot</h2>
-    <div class="form-grid">
-      <label class="full">Nomi<input id="fName" required maxlength="80"></label>
-      <label>Toifa
-        <input id="fCat" list="catList" required placeholder="Masalan: Ko'ylaklar">
-        <datalist id="catList"></datalist>
-      </label>
-      <label>O'lchamlar (vergul bilan)<input id="fSizes" placeholder="S, M, L, XL"></label>
-      <label>Narxi<input id="fPrice" type="number" min="0" step="1000" required></label>
-      <label>Eski narx (chegirma uchun)<input id="fOld" type="number" min="0" step="1000"></label>
-      <label class="full">Tavsif<textarea id="fDesc"></textarea></label>
-      <div class="full" style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
-        <img class="preview" id="fPrev" alt="">
-        <div style="flex:1;min-width:220px;display:grid;gap:10px">
-          <label>Rasm yuklash<input type="file" id="fFile" accept="image/*"></label>
-          <label>yoki rasm havolasi (URL)<input id="fUrl" placeholder="https://..."></label>
-          <button type="button" class="btn danger sm" id="fClear" style="justify-self:start">Rasmni olib tashlash</button>
-        </div>
-      </div>
-      <label class="check"><input type="checkbox" id="fStock" checked> Sotuvda bor</label>
-      <label class="check"><input type="checkbox" id="fFeat"> Tavsiya etilgan (TOP)</label>
-      <div class="full"><button class="btn" type="submit">Saqlash</button></div>
-    </div>
-  </form>
-</div>
+<div class="modal" id="modal"></div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
 
-<script src="store.js"></script>
+<script src="config.js"></script>
+<script src="api.js"></script>
 <script src="admin.js"></script>
 </body>
 </html>
