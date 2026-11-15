@@ -1,0 +1,17 @@
+{
+  "name": "monteranuzz",
+  "main": "worker.js",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "monteranuz",
+      "database_id": 7924ff5d-7cf3-4890-96e7-0a8f603399d8
+    }
+  ]
+}
